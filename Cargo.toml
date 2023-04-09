@@ -1,0 +1,10 @@
+[package]
+edition = "2021"
+name = "conway-game-of-life"
+version = "0.1.0"
+
+[dependencies]
+ansi-escapes = {version = "0.1.1"}
+clap = {version = "4.0.29", features = ["derive"]}
+rand = {version = "0.8", features = ["small_rng"]}
+rayon = {version = "1.7"}
