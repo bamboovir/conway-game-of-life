@@ -12,25 +12,25 @@ use crate::matrix::Matrix;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct GameOfLifeArgs {
-    /// the number of rows of the matrix, invalid if initial_file is specified
+    /// The number of rows of the matrix, invalid if initial_file is specified
     #[arg(long, default_value_t = 10)]
     rows: usize,
-    /// the number of columns of the matrix, invalid if initial_file is specified
+    /// The number of columns of the matrix, invalid if initial_file is specified
     #[arg(long, default_value_t = 10)]
     cols: usize,
-    /// whether to loop back at matrix boundaries
+    /// Whether to loop back at matrix boundaries
     #[arg(long, default_value_t = false)]
     loopback: bool,
-    /// 2d array json file of initial matrix state
+    /// 2D array json file of initial matrix state, if not set, a random matrix will be initialized.
     #[arg(long)]
     initial_file: Option<PathBuf>,
     #[arg(long, default_value_t = false)]
     /// whether to enable parallelism supported by rayon
     parallel: bool,
     #[arg(long, default_value_t = false)]
-    /// whether to enable parallelism supported by native OS thread
+    /// Whether to enable parallelism supported by native OS thread
     parallel_naive: bool,
-    /// number of OS threads in parallel_naive strategy
+    /// Number of OS threads in parallel_naive strategy
     #[arg(long, default_value_t = 2)]
     workers: usize,
 }
@@ -185,6 +185,7 @@ impl GameOfLife {
         let (row, col) = matrix.inverse_idx(idx);
 
         let mut live_count = 0;
+
         if row < rows - 1 && col < cols - 1 && matrix.get(row + 1, col + 1) == 1 {
             live_count += 1
         }
@@ -217,12 +218,18 @@ impl GameOfLife {
             live_count += 1
         }
 
-        if live_count < 2 || live_count > 3 {
-            *value = 0;
-        } else if (live_count == 2 || live_count == 3) && matrix.get(row, col) == 1 {
-            *value = 1;
-        } else if live_count == 3 && matrix.get(row, col) == 0 {
-            *value = 1;
+        *value = if matrix.get(row, col) == 1 {
+            if live_count < 2 || live_count > 3 {
+                0
+            } else {
+                1
+            }
+        } else {
+            if live_count == 3 {
+                1
+            } else {
+                0
+            }
         }
     }
 
@@ -271,12 +278,18 @@ impl GameOfLife {
             live_count += 1
         }
 
-        if live_count < 2 || live_count > 3 {
-            *value = 0;
-        } else if (live_count == 2 || live_count == 3) && matrix.get(row, col) == 1 {
-            *value = 1;
-        } else if live_count == 3 && matrix.get(row, col) == 0 {
-            *value = 1;
+        *value = if matrix.get(row, col) == 1 {
+            if live_count < 2 || live_count > 3 {
+                0
+            } else {
+                1
+            }
+        } else {
+            if live_count == 3 {
+                1
+            } else {
+                0
+            }
         }
     }
 }

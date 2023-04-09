@@ -1,5 +1,5 @@
 use serde::de::{Deserialize, Deserializer, SeqAccess, Visitor};
-use std::fmt::{Display, self};
+use std::fmt::{self, Display};
 
 pub struct Matrix {
     pub rows: usize,
@@ -50,7 +50,8 @@ impl Display for Matrix {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for row in 0..self.rows {
             for col in 0..self.cols {
-                write!(f, "{} ", self.get(row, col))?;
+                let cell = if self.get(row, col) == 0 { "." } else { "x" };
+                write!(f, "{} ", cell)?;
             }
             write!(f, "\n")?;
         }
