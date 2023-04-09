@@ -15,6 +15,10 @@ impl Matrix {
         }
     }
 
+    pub fn size(&self) -> usize {
+        self.rows * self.cols
+    }
+
     pub fn inverse_idx(&self, idx: usize) -> (usize, usize) {
         let row = idx / self.cols;
         let col = idx % self.cols;
