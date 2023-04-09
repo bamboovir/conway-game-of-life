@@ -5,7 +5,7 @@ use serde_json;
 use std::fs::File;
 use std::io::BufReader;
 use std::sync::Arc;
-use std::{cmp::min, fmt::Display, mem::swap, path::PathBuf, slice, thread};
+use std::{fmt::Display, mem::swap, path::PathBuf, slice, thread};
 
 use crate::matrix::Matrix;
 
@@ -127,7 +127,11 @@ impl GameOfLife {
 
             for i in 0..self.workers {
                 let start = i * chunk_size;
-                let end = min(start + chunk_size, self.matrix.size());
+                let end = if i == self.workers - 1 {
+                    self.matrix.size()
+                } else {
+                    start + chunk_size
+                };
                 let backup_matrix_ptr_wrapper =
                     ThreadPtrWrapper(self.backup_matrix.matrix.as_mut_ptr());
                 let matrix = matrix_arc.clone();
