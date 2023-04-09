@@ -6,13 +6,13 @@ This repository contains an implementation of [Conway's Game of Life](https://en
 Usage: conway-game-of-life [OPTIONS]
 
 Options:
-      --rows <ROWS>                  [default: 10]
-      --cols <COLS>                  [default: 10]
-      --loopback                     
-      --initial-file <INITIAL_FILE>  
-      --parallel                     
-      --parallel-naive               
-      --workers <WORKERS>            [default: 2]
+      --rows <ROWS>                  the number of rows of the matrix, invalid if initial_file is specified [default: 10]
+      --cols <COLS>                  the number of columns of the matrix, invalid if initial_file is specified [default: 10]
+      --loopback                     whether to loop back at matrix boundaries
+      --initial-file <INITIAL_FILE>  2d array json file of initial matrix state
+      --parallel                     whether to enable parallelism supported by rayon
+      --parallel-naive               whether to enable parallelism supported by native OS thread
+      --workers <WORKERS>            number of OS threads in parallel_naive strategy [default: 2]
   -h, --help                         Print help
   -V, --version                      Print version
 ```

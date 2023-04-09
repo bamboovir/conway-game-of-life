@@ -12,18 +12,25 @@ use crate::matrix::Matrix;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct GameOfLifeArgs {
+    /// the number of rows of the matrix, invalid if initial_file is specified
     #[arg(long, default_value_t = 10)]
     rows: usize,
+    /// the number of columns of the matrix, invalid if initial_file is specified
     #[arg(long, default_value_t = 10)]
     cols: usize,
+    /// whether to loop back at matrix boundaries
     #[arg(long, default_value_t = false)]
     loopback: bool,
+    /// 2d array json file of initial matrix state
     #[arg(long)]
     initial_file: Option<PathBuf>,
     #[arg(long, default_value_t = false)]
+    /// whether to enable parallelism supported by rayon
     parallel: bool,
     #[arg(long, default_value_t = false)]
+    /// whether to enable parallelism supported by native OS thread
     parallel_naive: bool,
+    /// number of OS threads in parallel_naive strategy
     #[arg(long, default_value_t = 2)]
     workers: usize,
 }
@@ -37,6 +44,7 @@ pub struct GameOfLife {
     parallel: bool,
     parallel_naive: bool,
     workers: usize,
+    loopback: bool,
 }
 
 impl GameOfLife {
@@ -76,6 +84,7 @@ impl GameOfLife {
             parallel: args.parallel,
             parallel_naive: args.parallel_naive,
             workers: args.workers,
+            loopback: args.loopback,
         }
     }
 
@@ -94,7 +103,7 @@ impl GameOfLife {
 
         for idx in 0..self.matrix.size() {
             let value = self.backup_matrix.matrix.get_mut(idx).unwrap();
-            Self::write_next_tick_state(&self.matrix, idx, value);
+            Self::write_next_tick_state(self.loopback, &self.matrix, idx, value);
         }
 
         swap(&mut self.matrix, &mut self.backup_matrix);
@@ -104,13 +113,14 @@ impl GameOfLife {
         self.ticks += 1;
 
         let matrix = &self.matrix;
+        let loopback = self.loopback;
 
         self.backup_matrix
             .matrix
             .par_iter_mut()
             .enumerate()
             .for_each(|(idx, value)| {
-                Self::write_next_tick_state(&matrix, idx, value);
+                Self::write_next_tick_state(loopback, &matrix, idx, value);
             });
 
         swap(&mut self.matrix, &mut self.backup_matrix);
@@ -132,6 +142,7 @@ impl GameOfLife {
                 } else {
                     start + chunk_size
                 };
+                let loopback = self.loopback;
                 let backup_matrix_ptr_wrapper =
                     ThreadPtrWrapper(self.backup_matrix.matrix.as_mut_ptr());
                 let matrix = matrix_arc.clone();
@@ -145,7 +156,7 @@ impl GameOfLife {
 
                     for idx in start..end {
                         let value = &mut slice[idx - start];
-                        Self::write_next_tick_state(&matrix, idx, value);
+                        Self::write_next_tick_state(loopback, &matrix, idx, value);
                     }
                 });
 
@@ -160,7 +171,15 @@ impl GameOfLife {
         swap(&mut self.matrix, &mut self.backup_matrix);
     }
 
-    fn write_next_tick_state(matrix: &Matrix, idx: usize, value: &mut u8) {
+    fn write_next_tick_state(loopback: bool, matrix: &Matrix, idx: usize, value: &mut u8) {
+        if loopback {
+            Self::write_loopback_next_tick_state(matrix, idx, value);
+        } else {
+            Self::write_terminate_next_tick_state(matrix, idx, value);
+        }
+    }
+
+    fn write_terminate_next_tick_state(matrix: &Matrix, idx: usize, value: &mut u8) {
         let rows = matrix.rows;
         let cols = matrix.cols;
         let (row, col) = matrix.inverse_idx(idx);
@@ -195,6 +214,60 @@ impl GameOfLife {
         }
 
         if row > 0 && matrix.get(row - 1, col) == 1 {
+            live_count += 1
+        }
+
+        if live_count < 2 || live_count > 3 {
+            *value = 0;
+        } else if (live_count == 2 || live_count == 3) && matrix.get(row, col) == 1 {
+            *value = 1;
+        } else if live_count == 3 && matrix.get(row, col) == 0 {
+            *value = 1;
+        }
+    }
+
+    fn write_loopback_next_tick_state(matrix: &Matrix, idx: usize, value: &mut u8) {
+        let rows = matrix.rows;
+        let cols = matrix.cols;
+        let (row, col) = matrix.inverse_idx(idx);
+
+        let mut live_count = 0;
+
+        // loopback
+        let row_inc = if row == rows - 1 { 0 } else { row + 1 };
+        let row_dec = if row == 0 { rows - 1 } else { row - 1 };
+        let col_inc = if col == cols - 1 { 0 } else { col + 1 };
+        let col_dec = if col == 0 { cols - 1 } else { col - 1 };
+
+        if matrix.get(row_inc, col_inc) == 1 {
+            live_count += 1
+        }
+
+        if matrix.get(row_dec, col_dec) == 1 {
+            live_count += 1
+        }
+
+        if matrix.get(row_inc, col_dec) == 1 {
+            live_count += 1
+        }
+
+        if matrix.get(row_dec, col_inc) == 1 {
+            live_count += 1
+        }
+
+        if matrix.get(row, col_inc) == 1 {
+            live_count += 1
+        }
+
+        if matrix.get(row, col_dec) == 1 {
+            live_count += 1
+        }
+
+        if matrix.get(row_inc, col) == 1 {
+            live_count += 1
+        }
+
+        if matrix.get(row_dec, col) == 1 {
             live_count += 1
         }
 
